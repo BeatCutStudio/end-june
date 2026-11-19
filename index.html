@@ -9,89 +9,114 @@
 <style>
   :root { --bg:#09090b; --card:#141418; --border:#27272a; --red:#dc2626; --text:#f4f4f5; --muted:#a1a1aa; }
   * { box-sizing:border-box; font-family:system-ui,-apple-system,sans-serif; }
-  body { margin:0; background:var(--bg); color:var(--text); padding:14px; }
-  header { display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid var(--border); padding-bottom:10px; margin-bottom:14px; }
-  h1 { margin:0; font-size:1.3rem; letter-spacing:2px; font-weight:900; }
+  body { margin:0; background:var(--bg); color:var(--text); padding:12px; }
+  header { display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid var(--border); padding-bottom:8px; margin-bottom:12px; max-width:1180px; margin-inline:auto; }
+  h1 { margin:0; font-size:1.25rem; letter-spacing:2px; font-weight:900; }
   h1 span { color:var(--red); }
-  .grid { display:grid; grid-template-columns:1fr; gap:14px; max-width:1100px; margin:auto; }
-  @media(min-width:850px){ .grid { grid-template-columns:380px 1fr; } }
-  .card { background:var(--card); border:1px solid var(--border); border-radius:12px; padding:14px; }
-  .label { font-size:0.75rem; text-transform:uppercase; color:var(--muted); font-weight:700; margin-bottom:6px; display:block; }
-  button, select, input[type="file"] { width:100%; padding:10px; border-radius:8px; border:1px solid var(--border); background:#1f1f26; color:var(--text); font-weight:600; cursor:pointer; }
+  .grid { display:grid; grid-template-columns:1fr; gap:12px; max-width:1180px; margin:auto; }
+  @media(min-width:880px){ .grid { grid-template-columns:410px 1fr; } }
+  .card { background:var(--card); border:1px solid var(--border); border-radius:12px; padding:12px; }
+  .label { font-size:0.7rem; text-transform:uppercase; color:var(--muted); font-weight:700; margin-bottom:5px; display:block; letter-spacing:0.5px; }
+  button, select, input[type="file"], input[type="text"] { width:100%; padding:8px 10px; border-radius:8px; border:1px solid var(--border); background:#1f1f26; color:var(--text); font-weight:600; font-size:0.8rem; cursor:pointer; }
+  input[type="text"] { cursor:text; }
   button.primary { background:var(--red); border-color:var(--red); color:#fff; }
   button.primary:disabled { opacity:0.5; cursor:not-allowed; }
-  .row { display:flex; gap:8px; margin-bottom:10px; }
+  .row { display:flex; gap:6px; margin-bottom:8px; }
   .row > * { flex:1; }
   .pill-group { display:flex; gap:6px; margin-bottom:10px; }
-  .pill { padding:8px; text-align:center; border:1px solid var(--border); border-radius:8px; cursor:pointer; font-size:0.8rem; font-weight:700; }
+  .pill { padding:7px; text-align:center; border:1px solid var(--border); border-radius:8px; cursor:pointer; font-size:0.78rem; font-weight:700; }
   .pill.active { background:var(--red); border-color:var(--red); }
-  canvas { width:100%; max-height:460px; background:#000; border-radius:10px; display:block; margin:auto; object-fit:contain; }
-  .clip-list { max-height:220px; overflow-y:auto; display:flex; flex-direction:column; gap:8px; margin-top:8px; }
-  .clip-item { background:#1c1c22; padding:8px; border-radius:8px; border:1px solid var(--border); font-size:0.8rem; }
-  .clip-item select { padding:5px; font-size:0.75rem; margin-top:4px; }
-  .var-grid { display:grid; grid-template-columns:repeat(9, 1fr); gap:4px; margin:10px 0; }
-  .var-btn { padding:8px 0; font-size:0.8rem; text-align:center; border-radius:6px; background:#1f1f26; border:1px solid var(--border); cursor:pointer; }
+  canvas { width:100%; max-height:480px; background:#000; border-radius:10px; display:block; margin:auto; object-fit:contain; }
+  .clip-list { max-height:210px; overflow-y:auto; display:flex; flex-direction:column; gap:6px; margin-top:6px; }
+  .clip-item { background:#1c1c22; padding:7px; border-radius:8px; border:1px solid var(--border); font-size:0.75rem; }
+  .clip-item select { padding:4px; font-size:0.72rem; margin-top:4px; }
+  .var-grid { display:grid; grid-template-columns:repeat(9, 1fr); gap:4px; margin:8px 0; }
+  .var-btn { padding:7px 0; font-size:0.78rem; text-align:center; border-radius:6px; background:#1f1f26; border:1px solid var(--border); cursor:pointer; }
   .var-btn.active { background:var(--red); border-color:var(--red); font-weight:800; }
   #camModal { display:none; position:fixed; inset:0; background:rgba(0,0,0,0.92); z-index:50; padding:16px; flex-direction:column; justify-content:center; align-items:center; }
   #camPreview { width:100%; max-width:420px; border-radius:12px; background:#000; }
-  .status { font-size:0.8rem; color:#4ade80; margin-top:6px; min-height:18px; }
+  .status { font-size:0.75rem; color:#4ade80; margin-top:4px; min-height:16px; }
+  .prog-bar { width:100%; height:6px; background:#27272a; border-radius:4px; overflow:hidden; margin-top:6px; display:none; }
+  .prog-fill { height:100%; width:0%; background:var(--red); transition:width 0.1s; }
 </style>
 </head>
 <body>
 
 <header>
   <h1>END <span>JUNE</span></h1>
-  <div style="font-size:0.75rem;color:var(--muted)">OFFLINE BEAT-SYNC STUDIO</div>
+  <div style="font-size:0.72rem;color:var(--muted)">v2.0 • SMART EXTRACT + GPU ENGINE</div>
 </header>
 
 <div class="grid">
   <!-- LEFT CONTROLS -->
   <div class="card">
-    <span class="label">1. Aspect Ratio</span>
+    <span class="label">1. Format & Viral Title Overlay (Optional)</span>
     <div class="pill-group" id="aspectToggle">
       <div class="pill active" data-aspect="9:16">9:16 Vertical</div>
       <div class="pill" data-aspect="16:9">16:9 Widescreen</div>
     </div>
+    <input type="text" id="titleOverlay" placeholder="Optional Title Badge (e.g. ARTIST - TRACK)" style="margin-bottom:10px;" />
 
     <span class="label">2. Upload Track (MP3 / WAV)</span>
     <input type="file" id="audioInput" accept="audio/*" />
     <div class="status" id="beatStatus">Waiting for track...</div>
 
-    <span class="label" style="margin-top:10px;">3. Add Footage (Performance & B-Roll)</span>
+    <span class="label" style="margin-top:8px;">3. Footage (Auto-Extracts Highlights from Long Clips)</span>
     <div class="row">
-      <label style="flex:1;text-align:center;padding:9px;background:#1f1f26;border:1px solid var(--border);border-radius:8px;cursor:pointer;font-size:0.8rem;font-weight:700;">
+      <label style="flex:1;text-align:center;padding:8px;background:#1f1f26;border:1px solid var(--border);border-radius:8px;cursor:pointer;font-size:0.78rem;font-weight:700;">
         + Upload Clips
         <input type="file" id="videoInput" accept="video/*" multiple hidden />
       </label>
-      <button id="openCamBtn" style="font-size:0.8rem;">● Shoot Take</button>
+      <button id="openCamBtn" style="font-size:0.78rem;">● Shoot Take</button>
+    </div>
+
+    <div class="row" style="margin-bottom:4px;">
+      <select id="globalTrans">
+        <option value="random">Transition: Smart Mix (All 6)</option>
+        <option value="0">Trans: Hard Cut</option>
+        <option value="1">Trans: Whip Pan Slide</option>
+        <option value="2">Trans: Zoom Dive</option>
+        <option value="3">Trans: White Strobe Flash</option>
+        <option value="4">Trans: Glitch Tear</option>
+        <option value="5">Trans: Smooth Dissolve</option>
+      </select>
+      <button id="randomizeStylesBtn" style="flex:0.7;font-size:0.72rem;">🎲 Randomize FX</button>
     </div>
 
     <div class="clip-list" id="clipList"></div>
 
-    <span class="label" style="margin-top:12px;">4. Shuffle Engine (Up to 9 Variations)</span>
+    <span class="label" style="margin-top:10px;">4. Shuffle Engine (9 Unique Variations)</span>
     <button class="primary" id="shuffleBtn">⚡ SHUFFLE 9 VARIATIONS</button>
     <div class="var-grid" id="varGrid"></div>
 
-    <span class="label" style="margin-top:10px;">5. Export & Smart Size Compressor</span>
+    <span class="label" style="margin-top:8px;">5. Export & Size Compressor</span>
     <div class="row">
       <select id="resSelect">
-        <option value="720">720p HD (Fast)</option>
+        <option value="720" selected>720p HD (Fastest)</option>
         <option value="1080">1080p Full HD</option>
       </select>
+      <select id="fpsSelect">
+        <option value="24" selected>24 FPS (Cinema/Fast)</option>
+        <option value="30">30 FPS (Smooth)</option>
+      </select>
       <select id="compSelect">
-        <option value="1800000">Compact (~13 MB/min)</option>
-        <option value="3500000" selected>Balanced HQ (~26 MB/min)</option>
-        <option value="6000000">Master (~45 MB/min)</option>
+        <option value="1600000">Compact (~12 MB/min)</option>
+        <option value="3000000" selected>Balanced (~22 MB/min)</option>
+        <option value="5500000">Master (~40 MB/min)</option>
       </select>
     </div>
     <button class="primary" id="exportBtn">⬇ EXPORT COMPRESSED MP4</button>
+    <div class="prog-bar" id="progBar"><div class="prog-fill" id="progFill"></div></div>
     <div class="status" id="exportStatus"></div>
   </div>
 
   <!-- RIGHT PREVIEW -->
   <div class="card" style="display:flex;flex-direction:column;justify-content:space-between;">
-    <canvas id="stage" width="720" height="1280"></canvas>
-    <div class="row" style="margin-top:12px;margin-bottom:0;">
+    <div style="position:relative;width:100%;">
+      <canvas id="stage" width="720" height="1280"></canvas>
+      <canvas id="hud" width="720" height="1280" style="position:absolute;inset:0;pointer-events:none;"></canvas>
+    </div>
+    <div class="row" style="margin-top:10px;margin-bottom:0;">
       <button id="playBtn">▶ Preview Sync</button>
       <button id="stopBtn">■ Stop</button>
     </div>
@@ -118,26 +143,37 @@ let audioBuffer = null;
 let audioCtx = null;
 let audioSourceNode = null;
 let beatTimes = [];
-let clips = []; // { id, name, type:'perf'|'broll', grade, fx, videoEl, duration }
-let variations = []; // Array of 9 timelines: [{ clipIndex, startOffset, time, fx }]
+let clips = []; // { id, name, type:'perf'|'broll', grade, fx, videoEl, duration, windows:[] }
+let variations = [];
 let activeVar = 0;
 let isPlaying = false;
 let playStartTime = 0;
 let rafId = null;
 
 const GRADES = [
-  { id: 0, name: 'Color Isolation (RED Pop + B&W)' },
+  { id: 0, name: 'Color Isolation (RED Pop)' },
   { id: 1, name: 'Dark / Moody Cinematic' },
   { id: 2, name: 'High Contrast B&W' },
   { id: 3, name: 'Neon Vibrant' },
   { id: 4, name: 'Crimson RED Wash' },
   { id: 5, name: 'Clean Natural' }
 ];
-const FX_LIST = ['Zoom Punch', 'Beat Flash', 'RGB Glitch', 'Beat Shake', 'Clean Cut'];
 
-// WEBGL2 SHADER SETUP FOR REAL-TIME COLOR GRADING + FX
+// 6 VIRAL FX
+const FX_LIST = [
+  '1. Zoom Punch',
+  '2. Beat Flash',
+  '3. RGB Glitch',
+  '4. Beat Shake',
+  '5. Whip Spin',
+  '6. VHS Retro'
+];
+
+// WEBGL2 SHADER (6 GRADES + 6 FX + 6 TRANSITIONS + VIGNETTE)
 const canvas = document.getElementById('stage');
-const gl = canvas.getContext('webgl2', { preserveDrawingBuffer: true });
+const hudCanvas = document.getElementById('hud');
+const hudCtx = hudCanvas.getContext('2d');
+const gl = canvas.getContext('webgl2', { preserveDrawingBuffer: true, powerPreference: 'high-performance' });
 
 const vs = `#version 300 es
 in vec2 a_pos; out vec2 v_uv;
@@ -149,24 +185,52 @@ in vec2 v_uv; out vec4 outColor;
 uniform sampler2D u_tex;
 uniform int u_grade;
 uniform int u_fx;
-uniform float u_beatPulse; // 1.0 on cut, decays to 0.0
-uniform vec2 u_scale; // aspect cover crop
+uniform int u_trans;
+uniform float u_beatPulse; // 1.0 at cut start -> 0.0
+uniform float u_time;
+uniform vec2 u_scale;
 
 void main(){
   vec2 uv = (v_uv - 0.5) * u_scale + 0.5;
-  // FX: Zoom Punch (0) or Shake (3)
-  if(u_fx == 0) { uv = (uv - 0.5) * (1.0 - u_beatPulse * 0.08) + 0.5; }
-  if(u_fx == 3) { uv.x += sin(u_beatPulse * 30.0) * 0.015 * u_beatPulse; }
+
+  // TRANSITIONS (active when u_beatPulse > 0.55)
+  float tProg = clamp((u_beatPulse - 0.55) / 0.45, 0.0, 1.0);
+  if(u_trans == 1 && tProg > 0.0) { // Whip Pan Slide
+    uv.x = fract(uv.x + tProg * 0.45);
+  } else if(u_trans == 2 && tProg > 0.0) { // Zoom Dive
+    uv = (uv - 0.5) * (1.0 - tProg * 0.35) + 0.5;
+  } else if(u_trans == 4 && tProg > 0.0) { // Glitch Tear
+    float band = floor(uv.y * 14.0);
+    uv.x += sin(band * 12.0 + u_time * 40.0) * 0.08 * tProg;
+  }
+
+  // 6 SPECIAL FX
+  if(u_fx == 0) { // 1. Zoom Punch
+    uv = (uv - 0.5) * (1.0 - u_beatPulse * 0.09) + 0.5;
+  } else if(u_fx == 3) { // 4. Beat Shake
+    uv.x += sin(u_beatPulse * 35.0) * 0.018 * u_beatPulse;
+    uv.y += cos(u_beatPulse * 28.0) * 0.012 * u_beatPulse;
+  } else if(u_fx == 4) { // 5. Whip Spin micro-tilt
+    float ang = sin(u_beatPulse * 3.14159) * 0.07;
+    vec2 d = uv - 0.5;
+    uv = vec2(d.x * cos(ang) - d.y * sin(ang), d.x * sin(ang) + d.y * cos(ang)) + 0.5;
+  }
 
   vec3 col;
-  // FX: RGB Glitch (2)
-  if(u_fx == 2 && u_beatPulse > 0.15) {
-    float shift = 0.018 * u_beatPulse;
-    col.r = texture(u_tex, uv + vec2(shift, 0.0)).r;
-    col.g = texture(u_tex, uv).g;
-    col.b = texture(u_tex, uv - vec2(shift, 0.0)).b;
+  // 3. RGB Glitch OR 6. VHS Chroma Shift
+  if((u_fx == 2 && u_beatPulse > 0.1) || u_fx == 5) {
+    float shift = (u_fx == 2) ? (0.022 * u_beatPulse) : 0.005;
+    col.r = texture(u_tex, clamp(uv + vec2(shift, 0.0), 0.001, 0.999)).r;
+    col.g = texture(u_tex, clamp(uv, 0.001, 0.999)).g;
+    col.b = texture(u_tex, clamp(uv - vec2(shift, 0.0), 0.001, 0.999)).b;
   } else {
     col = texture(u_tex, clamp(uv, 0.001, 0.999)).rgb;
+  }
+
+  // 6. VHS Scanlines
+  if(u_fx == 5) {
+    float scan = sin(v_uv.y * 420.0) * 0.06;
+    col -= scan;
   }
 
   float lum = dot(col, vec3(0.299, 0.587, 0.114));
@@ -174,24 +238,29 @@ void main(){
   // COLOR GRADING
   if(u_grade == 0) { // RED ISOLATION
     float redness = col.r - max(col.g, col.b);
-    float mask = smoothstep(0.08, 0.25, redness);
+    float mask = smoothstep(0.07, 0.24, redness);
     vec3 bw = vec3(pow(lum, 1.15));
-    col = mix(bw, col * vec3(1.25, 0.9, 0.9), mask);
+    col = mix(bw, col * vec3(1.3, 0.88, 0.88), mask);
   } else if(u_grade == 1) { // DARK MOODY CINEMATIC
-    col = pow(col, vec3(1.25)) * vec3(0.85, 0.92, 1.05);
+    col = pow(col, vec3(1.25)) * vec3(0.84, 0.92, 1.06);
     col = mix(vec3(lum), col, 0.85);
   } else if(u_grade == 2) { // HIGH CONTRAST B&W
-    float c = clamp((lum - 0.5) * 1.65 + 0.5, 0.0, 1.0);
-    col = vec3(c);
+    col = vec3(clamp((lum - 0.5) * 1.7 + 0.5, 0.0, 1.0));
   } else if(u_grade == 3) { // NEON VIBRANT
-    col = mix(vec3(lum), col, 1.55);
-    col = pow(col, vec3(0.92)) * vec3(1.05, 0.95, 1.15);
+    col = mix(vec3(lum), col, 1.6);
+    col = pow(col, vec3(0.92)) * vec3(1.06, 0.95, 1.16);
   } else if(u_grade == 4) { // CRIMSON RED WASH
-    col = vec3(lum * 1.35, lum * 0.22, lum * 0.22);
+    col = vec3(lum * 1.38, lum * 0.2, lum * 0.2);
   }
 
-  // FX: Beat Flash (1)
-  if(u_fx == 1) { col += vec3(u_beatPulse * 0.55); }
+  // 2. Beat Flash OR Transition 3 (White Strobe)
+  if(u_fx == 1) { col += vec3(u_beatPulse * 0.5); }
+  if(u_trans == 3 && tProg > 0.0) { col += vec3(tProg * 0.85); }
+  if(u_trans == 5 && tProg > 0.0) { col *= (1.0 - tProg * 0.65); } // Smooth Dip
+
+  // Cinematic Vignette + Bass Pulse
+  float dist = distance(v_uv, vec2(0.5));
+  col *= smoothstep(0.95, 0.35 - u_beatPulse * 0.05, dist);
 
   outColor = vec4(clamp(col, 0.0, 1.0), 1.0);
 }`;
@@ -216,7 +285,7 @@ gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
 gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
 gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
 
-// ASPECT RATIO TOGGLE
+// ASPECT & SIZE
 document.querySelectorAll('#aspectToggle .pill').forEach(p => {
   p.onclick = () => {
     document.querySelectorAll('#aspectToggle .pill').forEach(x => x.classList.remove('active'));
@@ -228,9 +297,10 @@ document.querySelectorAll('#aspectToggle .pill').forEach(p => {
 
 function updateCanvasSize(){
   const h = parseInt(document.getElementById('resSelect').value);
-  if(aspect === '9:16'){ canvas.width = Math.round(h * 9 / 16); canvas.height = h; }
-  else { canvas.width = Math.round(h * 16 / 9); canvas.height = h; }
-  gl.viewport(0, 0, canvas.width, canvas.height);
+  const w = (aspect === '9:16') ? Math.round(h * 9 / 16) : Math.round(h * 16 / 9);
+  canvas.width = hudCanvas.width = w;
+  canvas.height = hudCanvas.height = h;
+  gl.viewport(0, 0, w, h);
 }
 document.getElementById('resSelect').onchange = updateCanvasSize;
 
@@ -243,14 +313,14 @@ document.getElementById('audioInput').onchange = async (e) => {
   const arr = await file.arrayBuffer();
   audioBuffer = await audioCtx.decodeAudioData(arr);
   beatTimes = detectBeats(audioBuffer);
-  document.getElementById('beatStatus').textContent = `Ready: ${audioBuffer.duration.toFixed(1)}s | ${beatTimes.length} Sync Cuts Detected`;
+  document.getElementById('beatStatus').textContent = `Ready: ${audioBuffer.duration.toFixed(1)}s | ${beatTimes.length} Sync Cuts`;
   if(clips.length) generate9Variations();
 };
 
 function detectBeats(buffer){
   const data = buffer.getChannelData(0);
   const sr = buffer.sampleRate;
-  const step = Math.floor(sr * 0.05); // 50ms windows
+  const step = Math.floor(sr * 0.05);
   const energies = [];
   for(let i = 0; i < data.length; i += step){
     let sum = 0;
@@ -262,8 +332,7 @@ function detectBeats(buffer){
   for(let i = 2; i < energies.length - 2; i++){
     const t = (i * step) / sr;
     const localAvg = (energies[i-2] + energies[i-1] + energies[i+1] + energies[i+2]) / 4;
-    // Cut on strong energy transient with minimum 0.45s spacing
-    if(energies[i] > localAvg * 1.32 && energies[i] > 0.08 && (t - lastCut) >= 0.45){
+    if(energies[i] > localAvg * 1.32 && energies[i] > 0.075 && (t - lastCut) >= 0.48){
       cuts.push(t);
       lastCut = t;
     }
@@ -271,7 +340,22 @@ function detectBeats(buffer){
   return cuts;
 }
 
-// VIDEO UPLOAD & CLIP LIST
+// SMART LONG-VIDEO HIGHLIGHT EXTRACTOR
+function extractHighlightWindows(duration){
+  // Breaks long videos (e.g., 5 min) into 6 curated 4-second highlight zones
+  // so seeking stays fast and avoids dead intros/outros
+  if(duration <= 8) return [0];
+  const usableStart = Math.min(2, duration * 0.05);
+  const usableEnd = Math.max(usableStart + 4, duration * 0.92 - 4);
+  const windows = [];
+  const count = Math.min(8, Math.max(3, Math.floor(duration / 6)));
+  for(let i = 0; i < count; i++){
+    const pos = usableStart + ((usableEnd - usableStart) * (i / Math.max(1, count - 1)));
+    windows.push(pos);
+  }
+  return windows;
+}
+
 document.getElementById('videoInput').onchange = async (e) => {
   for(const file of e.target.files){
     await addVideoClip(file, file.name);
@@ -282,9 +366,19 @@ document.getElementById('videoInput').onchange = async (e) => {
 async function addVideoClip(blob, name){
   const url = URL.createObjectURL(blob);
   const v = document.createElement('video');
-  v.src = url; v.muted = true; v.playsInline = true; v.preload = 'auto';
+  v.src = url; v.muted = true; v.playsInline = true; v.preload = 'metadata';
   await new Promise(r => v.onloadedmetadata = r);
-  clips.push({ id: Date.now() + Math.random(), name, type: clips.length % 2 === 0 ? 'perf' : 'broll', grade: 0, fx: 0, videoEl: v, duration: v.duration || 4 });
+  const dur = v.duration || 4;
+  clips.push({
+    id: Date.now() + Math.random(),
+    name,
+    type: clips.length % 2 === 0 ? 'perf' : 'broll',
+    grade: 0,
+    fx: clips.length % FX_LIST.length,
+    videoEl: v,
+    duration: dur,
+    windows: extractHighlightWindows(dur)
+  });
   renderClipList();
 }
 
@@ -294,9 +388,10 @@ function renderClipList(){
   clips.forEach((c, idx) => {
     const div = document.createElement('div');
     div.className = 'clip-item';
+    const durTag = c.duration > 15 ? ` (${Math.round(c.duration)}s → Smart Extracted)` : ` (${c.duration.toFixed(1)}s)`;
     div.innerHTML = `
       <div style="display:flex;justify-content:space-between;">
-        <strong>${idx+1}. ${c.name.slice(0,18)}</strong>
+        <strong>${idx+1}. ${c.name.slice(0,16)}${durTag}</strong>
         <span style="color:var(--red);cursor:pointer;" data-del="${idx}">✕</span>
       </div>
       <div class="row" style="margin:4px 0 0 0;">
@@ -319,17 +414,26 @@ function renderClipList(){
   list.querySelectorAll('[data-fx]').forEach(el => el.onchange = () => clips[el.dataset.fx].fx = parseInt(el.value));
 }
 
+document.getElementById('randomizeStylesBtn').onclick = () => {
+  clips.forEach(c => {
+    c.grade = Math.floor(Math.random() * GRADES.length);
+    c.fx = Math.floor(Math.random() * FX_LIST.length);
+  });
+  renderClipList();
+  if(variations.length) renderFrameAtTime(0, false);
+};
+
 // SHUFFLE 9 VARIATIONS
 function generate9Variations(){
   if(!clips.length) return alert('Add at least 1 video clip first.');
-  const cuts = beatTimes.length ? beatTimes : Array.from({length: 30}, (_, i) => i * 0.8);
+  const cuts = beatTimes.length ? beatTimes : Array.from({length: 25}, (_, i) => i * 0.8);
   const perf = clips.map((c, i) => ({c, i})).filter(x => x.c.type === 'perf');
   const broll = clips.map((c, i) => ({c, i})).filter(x => x.c.type === 'broll');
+  const transMode = document.getElementById('globalTrans').value;
 
   variations = Array.from({length: 9}, (_, vIdx) => {
     let lastClip = -1;
     return cuts.map((t, cutIdx) => {
-      // Alternate Performance & B-Roll smartly when both exist
       const usePerf = (perf.length && broll.length) ? (cutIdx % 2 === vIdx % 2) : perf.length > 0;
       const pool = usePerf ? perf : (broll.length ? broll : perf);
       let chosen = pool[Math.floor(Math.random() * pool.length)];
@@ -337,8 +441,11 @@ function generate9Variations(){
         chosen = pool[(pool.indexOf(chosen) + 1) % pool.length];
       }
       lastClip = chosen.i;
-      const maxStart = Math.max(0, chosen.c.duration - 1.5);
-      return { time: t, clipIndex: chosen.i, startOffset: Math.random() * maxStart };
+      // Pick from extracted smart highlight windows
+      const winList = chosen.c.windows;
+      const startOffset = winList[Math.floor(Math.random() * winList.length)];
+      const trans = (transMode === 'random') ? Math.floor(Math.random() * 6) : parseInt(transMode);
+      return { time: t, clipIndex: chosen.i, startOffset, trans };
     });
   });
 
@@ -352,15 +459,34 @@ function generate9Variations(){
       activeVar = i;
       document.querySelectorAll('.var-btn').forEach(x => x.classList.remove('active'));
       b.classList.add('active');
-      renderFrameAtTime(0);
+      renderFrameAtTime(0, false);
     };
     grid.appendChild(b);
   }
-  renderFrameAtTime(0);
+  renderFrameAtTime(0, false);
 }
 document.getElementById('shuffleBtn').onclick = generate9Variations;
 
-// RENDER SINGLE FRAME AT TIME T
+// DRAW OVERLAY TEXT (TITLE BADGE)
+function drawOverlayBadge(pulse){
+  const title = document.getElementById('titleOverlay').value.trim();
+  hudCtx.clearRect(0, 0, hudCanvas.width, hudCanvas.height);
+  if(!title) return;
+  const scale = 1 + pulse * 0.04;
+  hudCtx.save();
+  hudCtx.translate(hudCanvas.width / 2, hudCanvas.height * 0.88);
+  hudCtx.scale(scale, scale);
+  hudCtx.font = `900 ${Math.round(hudCanvas.width * 0.042)}px system-ui, sans-serif`;
+  hudCtx.textAlign = 'center';
+  hudCtx.fillStyle = 'rgba(0,0,0,0.55)';
+  const w = hudCtx.measureText(title.toUpperCase()).width + 28;
+  hudCtx.fillRect(-w/2, -24, w, 34);
+  hudCtx.fillStyle = '#ffffff';
+  hudCtx.fillText(title.toUpperCase(), 0, 0);
+  hudCtx.restore();
+}
+
+// RENDER SINGLE FRAME
 async function renderFrameAtTime(t, seekExact = false){
   const tl = variations[activeVar];
   if(!tl || !tl.length || !clips.length) return;
@@ -369,11 +495,18 @@ async function renderFrameAtTime(t, seekExact = false){
   const seg = tl[segIdx];
   const clip = clips[seg.clipIndex];
   const v = clip.videoEl;
-  const targetTime = (seg.startOffset + (t - seg.time)) % Math.max(0.1, clip.duration - 0.05);
+  const targetTime = (seg.startOffset + (t - seg.time)) % Math.max(0.2, clip.duration - 0.1);
 
   if(seekExact){
-    v.currentTime = targetTime;
-    await new Promise(r => { const h = () => { v.removeEventListener('seeked', h); r(); }; v.addEventListener('seeked', h); setTimeout(r, 80); });
+    if(Math.abs(v.currentTime - targetTime) > 0.02){
+      v.currentTime = targetTime;
+      await new Promise(r => {
+        let done = false;
+        const finish = () => { if(!done){ done = true; v.removeEventListener('seeked', finish); r(); } };
+        v.addEventListener('seeked', finish);
+        setTimeout(finish, 120); // Prevents infinite hang on slow keyframes
+      });
+    }
   } else if(Math.abs(v.currentTime - targetTime) > 0.35){
     v.currentTime = targetTime;
   }
@@ -381,7 +514,6 @@ async function renderFrameAtTime(t, seekExact = false){
   gl.bindTexture(gl.TEXTURE_2D, tex);
   gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, v);
 
-  // Aspect cover calculation
   const cAsp = canvas.width / canvas.height;
   const vAsp = (v.videoWidth || 720) / (v.videoHeight || 1280);
   let sx = 1, sy = 1;
@@ -390,9 +522,12 @@ async function renderFrameAtTime(t, seekExact = false){
   const pulse = Math.max(0, 1 - (t - seg.time) * 3.5);
   gl.uniform1i(gl.getUniformLocation(prog, 'u_grade'), clip.grade);
   gl.uniform1i(gl.getUniformLocation(prog, 'u_fx'), clip.fx);
+  gl.uniform1i(gl.getUniformLocation(prog, 'u_trans'), seg.trans);
   gl.uniform1f(gl.getUniformLocation(prog, 'u_beatPulse'), pulse);
+  gl.uniform1f(gl.getUniformLocation(prog, 'u_time'), t);
   gl.uniform2f(gl.getUniformLocation(prog, 'u_scale'), sx, sy);
   gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+  drawOverlayBadge(pulse);
 }
 
 // PREVIEW PLAYBACK
@@ -468,45 +603,82 @@ document.getElementById('recToggleBtn').onclick = () => {
   }
 };
 
-// HARDWARE-ACCELERATED COMPRESSED MP4 EXPORT
+// NON-BLOCKING HARDWARE MP4 EXPORT WITH TITLE COMPOSITING
 document.getElementById('exportBtn').onclick = async () => {
   if(!variations.length) return alert('Generate variations first.');
   stopPlayback();
+  const btn = document.getElementById('exportBtn');
   const status = document.getElementById('exportStatus');
-  const bitrate = parseInt(document.getElementById('compSelect').value);
-  const fps = 30;
-  const duration = audioBuffer ? audioBuffer.duration : 15;
-  const totalFrames = Math.floor(duration * fps);
+  const progBar = document.getElementById('progBar');
+  const progFill = document.getElementById('progFill');
 
-  status.textContent = 'Encoding compressed MP4 on device GPU...';
-  const output = new Output({ format: new Mp4OutputFormat(), target: new BufferTarget() });
-  const videoSource = new CanvasSource(canvas, { codec: 'avc', bitrate });
-  output.addVideoTrack(videoSource);
+  btn.disabled = true;
+  progBar.style.display = 'block';
+  progFill.style.width = '2%';
 
-  let audioTrackSource = null;
-  if(audioBuffer){
-    audioTrackSource = new AudioBufferSource({ codec: 'aac', bitrate: 128000 });
-    output.addAudioTrack(audioTrackSource);
+  try {
+    const bitrate = parseInt(document.getElementById('compSelect').value);
+    const fps = parseInt(document.getElementById('fpsSelect').value);
+    const duration = audioBuffer ? audioBuffer.duration : 15;
+    const totalFrames = Math.floor(duration * fps);
+
+    // Composite canvas merges WebGL video + HUD title badge
+    const compCanvas = document.createElement('canvas');
+    compCanvas.width = canvas.width;
+    compCanvas.height = canvas.height;
+    const compCtx = compCanvas.getContext('2d');
+
+    status.textContent = 'Initializing hardware encoder...';
+    await new Promise(r => setTimeout(r, 30));
+
+    const output = new Output({ format: new Mp4OutputFormat(), target: new BufferTarget() });
+    const videoSource = new CanvasSource(compCanvas, { codec: 'avc', bitrate });
+    output.addVideoTrack(videoSource);
+
+    let audioTrackSource = null;
+    if(audioBuffer){
+      audioTrackSource = new AudioBufferSource({ codec: 'aac', bitrate: 128000 });
+      output.addAudioTrack(audioTrackSource);
+    }
+
+    await output.start();
+    if(audioTrackSource && audioBuffer){
+      status.textContent = 'Encoding AAC audio track...';
+      await new Promise(r => setTimeout(r, 20));
+      await audioTrackSource.add(audioBuffer);
+    }
+
+    for(let f = 0; f < totalFrames; f++){
+      const t = f / fps;
+      await renderFrameAtTime(t, true);
+      compCtx.drawImage(canvas, 0, 0);
+      compCtx.drawImage(hudCanvas, 0, 0);
+      await videoSource.add(t, 1 / fps);
+
+      if(f % 8 === 0){
+        const pct = Math.round((f / totalFrames) * 100);
+        progFill.style.width = `${pct}%`;
+        status.textContent = `Rendering Frame ${f}/${totalFrames} (${pct}%)`;
+        await new Promise(r => setTimeout(r, 0)); // Yields to UI so laptop never freezes
+      }
+    }
+
+    status.textContent = 'Finalizing compressed MP4...';
+    await output.finalize();
+    progFill.style.width = '100%';
+
+    const blob = new Blob([output.target.buffer], { type: 'video/mp4' });
+    const mb = (blob.size / (1024 * 1024)).toFixed(1);
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = `END_JUNE_V${activeVar+1}_${aspect.replace(':','x')}.mp4`;
+    a.click();
+    status.textContent = `Done! Downloaded (${mb} MB)`;
+  } catch (err) {
+    status.textContent = `Export error: ${err.message}. Try 720p + 24 FPS.`;
+  } finally {
+    btn.disabled = false;
   }
-
-  await output.start();
-  if(audioTrackSource && audioBuffer) await audioTrackSource.add(audioBuffer);
-
-  for(let f = 0; f < totalFrames; f++){
-    const t = f / fps;
-    await renderFrameAtTime(t, true);
-    await videoSource.add(t, 1 / fps);
-    if(f % 15 === 0) status.textContent = `Rendering & Compressing: ${Math.round((f/totalFrames)*100)}%`;
-  }
-
-  await output.finalize();
-  const blob = new Blob([output.target.buffer], { type: 'video/mp4' });
-  const mb = (blob.size / (1024 * 1024)).toFixed(1);
-  const a = document.createElement('a');
-  a.href = URL.createObjectURL(blob);
-  a.download = `END_JUNE_V${activeVar+1}_${aspect.replace(':','x')}.mp4`;
-  a.click();
-  status.textContent = `Done! Downloaded (${mb} MB)`;
 };
 </script>
 </body>
