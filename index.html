@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>END JUNE v3.0 — Music Video Engine</title>
+<title>END JUNE v4.0 — Lip-Sync Music Video Engine</title>
 <link rel="manifest" href="./manifest.json" />
 <meta name="theme-color" content="#dc2626" />
 <style>
@@ -14,7 +14,7 @@
   h1 { margin:0; font-size:1.25rem; letter-spacing:2px; font-weight:900; }
   h1 span { color:var(--red); }
   .grid { display:grid; grid-template-columns:1fr; gap:12px; max-width:1180px; margin:auto; }
-  @media(min-width:880px){ .grid { grid-template-columns:410px 1fr; } }
+  @media(min-width:880px){ .grid { grid-template-columns:420px 1fr; } }
   .card { background:var(--card); border:1px solid var(--border); border-radius:12px; padding:12px; }
   .label { font-size:0.7rem; text-transform:uppercase; color:var(--muted); font-weight:700; margin-bottom:5px; display:block; letter-spacing:0.5px; }
   button, select, input[type="file"], input[type="text"] { width:100%; padding:8px 10px; border-radius:8px; border:1px solid var(--border); background:#1f1f26; color:var(--text); font-weight:600; font-size:0.8rem; cursor:pointer; }
@@ -27,9 +27,11 @@
   .pill { padding:7px; text-align:center; border:1px solid var(--border); border-radius:8px; cursor:pointer; font-size:0.78rem; font-weight:700; }
   .pill.active { background:var(--red); border-color:var(--red); }
   canvas { width:100%; max-height:480px; background:#000; border-radius:10px; display:block; margin:auto; object-fit:contain; }
-  .clip-list { max-height:210px; overflow-y:auto; display:flex; flex-direction:column; gap:6px; margin-top:6px; }
-  .clip-item { background:#1c1c22; padding:7px; border-radius:8px; border:1px solid var(--border); font-size:0.75rem; }
+  .clip-list { max-height:240px; overflow-y:auto; display:flex; flex-direction:column; gap:6px; margin-top:6px; }
+  .clip-item { background:#1c1c22; padding:8px; border-radius:8px; border:1px solid var(--border); font-size:0.75rem; }
   .clip-item select { padding:4px; font-size:0.72rem; margin-top:4px; }
+  .sync-bar { display:flex; align-items:center; gap:6px; margin-top:6px; background:#121216; padding:5px 7px; border-radius:6px; border:1px solid #27272a; }
+  .sync-bar input[type="range"] { flex:1; accent-color:var(--red); cursor:pointer; }
   .var-grid { display:grid; grid-template-columns:repeat(9, 1fr); gap:4px; margin:8px 0; }
   .var-btn { padding:7px 0; font-size:0.78rem; text-align:center; border-radius:6px; background:#1f1f26; border:1px solid var(--border); cursor:pointer; }
   .var-btn.active { background:var(--red); border-color:var(--red); font-weight:800; }
@@ -44,7 +46,7 @@
 
 <header>
   <h1>END <span>JUNE</span></h1>
-  <div style="font-size:0.72rem;color:#4ade80;font-weight:700;">v3.0 • TRUE REMIX ENGINE</div>
+  <div style="font-size:0.72rem;color:#4ade80;font-weight:700;">v4.0 • LIP-SYNC LOCK ENGINE</div>
 </header>
 
 <div class="grid">
@@ -57,17 +59,17 @@
     </div>
     <input type="text" id="titleOverlay" placeholder="Optional Title Badge (e.g. ARTIST - TRACK)" style="margin-bottom:10px;" />
 
-    <span class="label">2. Upload Track (MP3 / WAV)</span>
+    <span class="label">2. Master Track (MP3 / WAV)</span>
     <input type="file" id="audioInput" accept="audio/*" />
-    <div class="status" id="beatStatus">Waiting for track...</div>
+    <div class="status" id="beatStatus">Upload master song first for auto lip-sync...</div>
 
-    <span class="label" style="margin-top:8px;">3. Footage (Auto-Extracts Highlights from Long Clips)</span>
+    <span class="label" style="margin-top:8px;">3. Performance Takes (Lip-Synced) & B-Roll Cuts</span>
     <div class="row">
       <label style="flex:1;text-align:center;padding:8px;background:#1f1f26;border:1px solid var(--border);border-radius:8px;cursor:pointer;font-size:0.78rem;font-weight:700;">
         + Upload Clips
         <input type="file" id="videoInput" accept="video/*" multiple hidden />
       </label>
-      <button id="openCamBtn" style="font-size:0.78rem;">● Shoot Take</button>
+      <button id="openCamBtn" style="font-size:0.78rem;">● Shoot Synced Take</button>
     </div>
 
     <div class="row" style="margin-bottom:4px;">
@@ -85,7 +87,7 @@
 
     <div class="clip-list" id="clipList"></div>
 
-    <span class="label" style="margin-top:10px;">4. Shuffle Engine (9 Distinct Remixes)</span>
+    <span class="label" style="margin-top:10px;">4. Shuffle Engine (Lip-Sync Locked Multi-Cam)</span>
     <button class="primary" id="shuffleBtn">⚡ SHUFFLE 9 VARIATIONS</button>
     <div class="var-grid" id="varGrid"></div>
     <div class="status" id="varInfo" style="color:#a1a1aa;"></div>
@@ -142,10 +144,11 @@ if ('serviceWorker' in navigator) {
 
 let aspect = '9:16';
 let audioBuffer = null;
+let masterEnvelope = null;
 let audioCtx = null;
 let audioSourceNode = null;
 let beatTimes = [];
-let clips = [];
+let clips = []; // { id, name, type:'perf'|'broll', grade, fx, videoEl, duration, windows:[], syncOffset:0, autoSynced:false }
 let variations = [];
 let varDescriptions = [];
 let activeVar = 0;
@@ -297,15 +300,83 @@ function updateCanvasSize(){
 }
 document.getElementById('resSelect').onchange = updateCanvasSize;
 
+// BUILD 50Hz ENERGY ENVELOPE FOR WAVEFORM AUTO-SYNC
+function computeEnvelope(buffer){
+  const data = buffer.getChannelData(0);
+  const sr = buffer.sampleRate;
+  const win = Math.floor(sr * 0.02); // 20ms resolution (50 frames/sec)
+  const env = new Float32Array(Math.floor(data.length / win));
+  for(let i = 0; i < env.length; i++){
+    let sum = 0;
+    const base = i * win;
+    for(let j = 0; j < win; j++) sum += Math.abs(data[base + j]);
+    env[i] = sum / win;
+  }
+  return env;
+}
+
+// AUTO-ALIGN PERFORMANCE VIDEO AUDIO TO MASTER SONG AUDIO
+async function detectVideoSyncOffset(blob){
+  if(!masterEnvelope || !audioCtx) return { offset: 0, matched: false };
+  try {
+    const arr = await blob.arrayBuffer();
+    const vidAudio = await audioCtx.decodeAudioData(arr);
+    const vidEnv = computeEnvelope(vidAudio);
+    if(vidEnv.length < 25) return { offset: 0, matched: false };
+
+    // Search lag between -5s and +15s (at 20ms per step -> -250 to +750 steps)
+    // Positive offset means video started recording BEFORE the song started (or song starts later in the video)
+    let bestLag = 0;
+    let bestScore = -1;
+    const maxVidSteps = Math.min(vidEnv.length, 1500); // First 30s of video
+
+    for(let lag = -250; lag <= 1500; lag++){
+      let dot = 0, normA = 0, normB = 0, count = 0;
+      for(let i = 0; i < maxVidSteps; i++){
+        const mIdx = i - lag;
+        if(mIdx >= 0 && mIdx < masterEnvelope.length){
+          const a = vidEnv[i];
+          const b = masterEnvelope[mIdx];
+          dot += a * b;
+          normA += a * a;
+          normB += b * b;
+          count++;
+        }
+      }
+      if(count > 50 && normA > 0 && normB > 0){
+        const corr = dot / Math.sqrt(normA * normB);
+        if(corr > bestScore){
+          bestScore = corr;
+          bestLag = lag;
+        }
+      }
+    }
+    return { offset: +(bestLag * 0.02).toFixed(2), matched: bestScore > 0.45 };
+  } catch(e) {
+    return { offset: 0, matched: false };
+  }
+}
+
 document.getElementById('audioInput').onchange = async (e) => {
   const file = e.target.files[0];
   if(!file) return;
-  document.getElementById('beatStatus').textContent = 'Analyzing beats...';
+  document.getElementById('beatStatus').textContent = 'Analyzing master waveform & beats...';
   audioCtx = new (window.AudioContext || window.webkitAudioContext)();
   const arr = await file.arrayBuffer();
   audioBuffer = await audioCtx.decodeAudioData(arr);
+  masterEnvelope = computeEnvelope(audioBuffer);
   beatTimes = detectBeats(audioBuffer);
-  document.getElementById('beatStatus').textContent = `Ready: ${audioBuffer.duration.toFixed(1)}s | ${beatTimes.length} Sync Points`;
+  document.getElementById('beatStatus').textContent = `Master Locked: ${audioBuffer.duration.toFixed(1)}s | ${beatTimes.length} Sync Cuts`;
+
+  // Re-run waveform sync on any already uploaded Performance clips
+  for(const c of clips){
+    if(c.type === 'perf' && c.rawBlob){
+      const res = await detectVideoSyncOffset(c.rawBlob);
+      c.syncOffset = res.offset;
+      c.autoSynced = res.matched;
+    }
+  }
+  renderClipList();
   if(clips.length) generate9Variations();
 };
 
@@ -324,7 +395,7 @@ function detectBeats(buffer){
   for(let i = 2; i < energies.length - 2; i++){
     const t = (i * step) / sr;
     const localAvg = (energies[i-2] + energies[i-1] + energies[i+1] + energies[i+2]) / 4;
-    if(energies[i] > localAvg * 1.28 && energies[i] > 0.065 && (t - lastCut) >= 0.42){
+    if(energies[i] > localAvg * 1.28 && energies[i] > 0.065 && (t - lastCut) >= 0.48){
       cuts.push(t);
       lastCut = t;
     }
@@ -344,26 +415,41 @@ function extractHighlightWindows(duration){
 
 document.getElementById('videoInput').onchange = async (e) => {
   for(const file of e.target.files){
-    await addVideoClip(file, file.name);
+    await addVideoClip(file, file.name, false);
   }
   if(beatTimes.length) generate9Variations();
 };
 
-async function addVideoClip(blob, name){
+async function addVideoClip(blob, name, fromInAppCam = false){
   const url = URL.createObjectURL(blob);
   const v = document.createElement('video');
-  v.src = url; v.muted = true; v.playsInline = true; v.preload = 'metadata';
+  v.src = url; v.muted = true; v.playsInline = true; v.preload = 'auto';
   await new Promise(r => v.onloadedmetadata = r);
   const dur = v.duration || 4;
+  const defaultType = (clips.length === 0 || fromInAppCam) ? 'perf' : (clips.length % 2 === 1 ? 'broll' : 'perf');
+
+  let syncOffset = 0;
+  let autoSynced = fromInAppCam;
+  if(defaultType === 'perf' && !fromInAppCam && masterEnvelope){
+    document.getElementById('beatStatus').textContent = `Auto-syncing lip movements for ${name.slice(0,14)}...`;
+    const res = await detectVideoSyncOffset(blob);
+    syncOffset = res.offset;
+    autoSynced = res.matched;
+    document.getElementById('beatStatus').textContent = `Master Locked: ${audioBuffer.duration.toFixed(1)}s | ${beatTimes.length} Sync Cuts`;
+  }
+
   clips.push({
     id: Date.now() + Math.random(),
     name,
-    type: clips.length % 2 === 0 ? 'perf' : 'broll',
+    rawBlob: blob,
+    type: defaultType,
     grade: 0,
-    fx: clips.length % FX_LIST.length,
+    fx: 0,
     videoEl: v,
     duration: dur,
-    windows: extractHighlightWindows(dur)
+    windows: extractHighlightWindows(dur),
+    syncOffset,
+    autoSynced
   });
   renderClipList();
 }
@@ -374,16 +460,26 @@ function renderClipList(){
   clips.forEach((c, idx) => {
     const div = document.createElement('div');
     div.className = 'clip-item';
-    const durTag = c.duration > 15 ? ` (${Math.round(c.duration)}s → Smart Extracted)` : ` (${c.duration.toFixed(1)}s)`;
+    const badge = c.type === 'perf'
+      ? `<span style="color:#4ade80;font-weight:700;">[LIP-SYNCED ${c.syncOffset >= 0 ? '+' : ''}${c.syncOffset.toFixed(2)}s]</span>`
+      : `<span style="color:#fbbf24;font-weight:700;">[B-ROLL CUTS]</span>`;
+
+    const syncSliderHtml = c.type === 'perf' ? `
+      <div class="sync-bar">
+        <span style="font-size:0.68rem;color:var(--muted);white-space:nowrap;">Lip-Sync Offset:</span>
+        <input type="range" min="-5" max="15" step="0.05" value="${c.syncOffset}" data-sync="${idx}" />
+        <span id="syncVal_${idx}" style="font-size:0.7rem;font-weight:700;min-width:42px;text-align:right;">${c.syncOffset.toFixed(2)}s</span>
+      </div>` : '';
+
     div.innerHTML = `
-      <div style="display:flex;justify-content:space-between;">
-        <strong>${idx+1}. ${c.name.slice(0,16)}${durTag}</strong>
-        <span style="color:var(--red);cursor:pointer;" data-del="${idx}">✕</span>
+      <div style="display:flex;justify-content:space-between;align-items:center;">
+        <strong>${idx+1}. ${c.name.slice(0,14)} ${badge}</strong>
+        <span style="color:var(--red);cursor:pointer;padding:0 4px;" data-del="${idx}">✕</span>
       </div>
       <div class="row" style="margin:4px 0 0 0;">
         <select data-type="${idx}">
-          <option value="perf" ${c.type==='perf'?'selected':''}>Performance</option>
-          <option value="broll" ${c.type==='broll'?'selected':''}>B-Roll</option>
+          <option value="perf" ${c.type==='perf'?'selected':''}>Performance (Sync)</option>
+          <option value="broll" ${c.type==='broll'?'selected':''}>B-Roll (Visuals)</option>
         </select>
         <select data-grade="${idx}">
           ${GRADES.map(g => `<option value="${g.id}" ${c.grade===g.id?'selected':''}>${g.name}</option>`).join('')}
@@ -391,13 +487,31 @@ function renderClipList(){
         <select data-fx="${idx}">
           ${FX_LIST.map((f, i) => `<option value="${i}" ${c.fx===i?'selected':''}>${f}</option>`).join('')}
         </select>
-      </div>`;
+      </div>
+      ${syncSliderHtml}`;
     list.appendChild(div);
   });
+
   list.querySelectorAll('[data-del]').forEach(el => el.onclick = () => { clips.splice(el.dataset.del, 1); renderClipList(); });
-  list.querySelectorAll('[data-type]').forEach(el => el.onchange = () => clips[el.dataset.type].type = el.value);
+  list.querySelectorAll('[data-type]').forEach(el => el.onchange = async () => {
+    const c = clips[el.dataset.type];
+    c.type = el.value;
+    if(c.type === 'perf' && c.rawBlob && masterEnvelope){
+      const res = await detectVideoSyncOffset(c.rawBlob);
+      c.syncOffset = res.offset;
+      c.autoSynced = res.matched;
+    }
+    renderClipList();
+    if(variations.length) generate9Variations();
+  });
   list.querySelectorAll('[data-grade]').forEach(el => el.onchange = () => clips[el.dataset.grade].grade = parseInt(el.value));
   list.querySelectorAll('[data-fx]').forEach(el => el.onchange = () => clips[el.dataset.fx].fx = parseInt(el.value));
+  list.querySelectorAll('[data-sync]').forEach(el => el.oninput = () => {
+    const i = el.dataset.sync;
+    clips[i].syncOffset = parseFloat(el.value);
+    document.getElementById(`syncVal_${i}`).textContent = `${clips[i].syncOffset.toFixed(2)}s`;
+    if(variations.length) generate9Variations();
+  });
 }
 
 document.getElementById('randomizeStylesBtn').onclick = () => {
@@ -409,17 +523,17 @@ document.getElementById('randomizeStylesBtn').onclick = () => {
   if(variations.length) renderFrameAtTime(0, true);
 };
 
-// TRUE REMIX SHUFFLE (9 GENUINELY DIFFERENT EDITS)
+// TRUE MULTI-CAM LIP-SYNC SHUFFLE
 const REMIX_MODES = [
-  { name: 'V1: Balanced Beat Cut', step: 1, perfBias: 0.5, overrideGrade: -1 },
-  { name: 'V2: Rapid Hype Cuts', step: 1, perfBias: 0.3, overrideGrade: -1 },
-  { name: 'V3: Cinematic Holds', step: 2, perfBias: 0.7, overrideGrade: -1 },
-  { name: 'V4: B-Roll Heavy Remix', step: 1, perfBias: 0.2, overrideGrade: -1 },
+  { name: 'V1: Balanced Multi-Cam + B-Roll', step: 1, perfBias: 0.6, overrideGrade: -1 },
+  { name: 'V2: Fast Hype Cuts', step: 1, perfBias: 0.45, overrideGrade: -1 },
+  { name: 'V3: Vocal Verse Hold + B-Roll Hits', step: 2, perfBias: 0.7, overrideGrade: -1 },
+  { name: 'V4: Heavy B-Roll + Chorus Sync', step: 1, perfBias: 0.35, overrideGrade: -1 },
   { name: 'V5: Performance Spotlight', step: 2, perfBias: 0.85, overrideGrade: -1 },
-  { name: 'V6: Sin City RED Pop Remix', step: 1, perfBias: 0.5, overrideGrade: 0 },
-  { name: 'V7: High-Contrast Noir Cut', step: 2, perfBias: 0.4, overrideGrade: 2 },
+  { name: 'V6: Sin City RED Pop Remix', step: 1, perfBias: 0.6, overrideGrade: 0 },
+  { name: 'V7: High-Contrast Noir Cut', step: 2, perfBias: 0.55, overrideGrade: 2 },
   { name: 'V8: Neon Club Remix', step: 1, perfBias: 0.5, overrideGrade: 3 },
-  { name: 'V9: Slow-Burn Drama Cut', step: 3, perfBias: 0.6, overrideGrade: 1 }
+  { name: 'V9: Slow-Burn Drama Cut', step: 3, perfBias: 0.65, overrideGrade: 1 }
 ];
 
 function generate9Variations(){
@@ -430,13 +544,11 @@ function generate9Variations(){
   const transMode = document.getElementById('globalTrans').value;
 
   variations = REMIX_MODES.map((mode, vIdx) => {
-    // Filter beat points based on remix pace (step 1 = fast, step 2 = medium, step 3 = slow)
     const activeCuts = baseCuts.filter((_, idx) => idx % mode.step === 0);
     let lastClip = -1;
     let lastWin = -1;
 
-    return activeCuts.map((t, cutIdx) => {
-      // Weighted random selection so every variation picks a genuinely different sequence
+    return activeCuts.map((t) => {
       let pool;
       if(perf.length && broll.length){
         pool = (Math.random() < mode.perfBias) ? perf : broll;
@@ -451,15 +563,20 @@ function generate9Variations(){
       }
       lastClip = chosen.i;
 
-      // Pick a distinct timestamp window inside the clip
-      const winList = chosen.c.windows;
-      let winIdx = Math.floor(Math.random() * winList.length);
-      if(winList.length > 1 && winIdx === lastWin) winIdx = (winIdx + 1) % winList.length;
-      lastWin = winIdx;
+      // CRITICAL LIP-SYNC RULE:
+      // If Performance clip -> lock 1:1 to song time + syncOffset!
+      // If B-Roll clip -> pick random highlight window!
+      let isLockedPerf = (chosen.c.type === 'perf');
+      let brollStartOffset = 0;
 
-      // Add random jitter within the window so even 1-clip tests jump to completely different scenes
-      const jitter = Math.random() * Math.min(2.5, chosen.c.duration * 0.25);
-      const startOffset = (winList[winIdx] + jitter) % Math.max(0.5, chosen.c.duration - 1.0);
+      if(!isLockedPerf){
+        const winList = chosen.c.windows;
+        let winIdx = Math.floor(Math.random() * winList.length);
+        if(winList.length > 1 && winIdx === lastWin) winIdx = (winIdx + 1) % winList.length;
+        lastWin = winIdx;
+        const jitter = Math.random() * Math.min(2.0, chosen.c.duration * 0.25);
+        brollStartOffset = (winList[winIdx] + jitter) % Math.max(0.5, chosen.c.duration - 1.0);
+      }
 
       const trans = (transMode === 'random') ? Math.floor(Math.random() * 6) : parseInt(transMode);
       const fx = (vIdx % 2 === 1) ? ((chosen.c.fx + vIdx) % FX_LIST.length) : chosen.c.fx;
@@ -467,7 +584,8 @@ function generate9Variations(){
       return {
         time: t,
         clipIndex: chosen.i,
-        startOffset,
+        isLockedPerf,
+        brollStartOffset,
         trans,
         grade: mode.overrideGrade !== -1 ? mode.overrideGrade : chosen.c.grade,
         fx
@@ -523,10 +641,20 @@ async function renderFrameAtTime(t, seekExact = false){
   const seg = tl[segIdx];
   const clip = clips[seg.clipIndex];
   const v = clip.videoEl;
-  const targetTime = (seg.startOffset + (t - seg.time)) % Math.max(0.2, clip.duration - 0.1);
+
+  // CALCULATE EXACT TARGET FRAME TIME
+  let targetTime;
+  if(seg.isLockedPerf){
+    // 1:1 Master Song Sync for Performance Takes
+    targetTime = Math.max(0, t + clip.syncOffset);
+    if(targetTime >= clip.duration - 0.05) targetTime = targetTime % Math.max(0.2, clip.duration - 0.1);
+  } else {
+    // Dynamic Highlight Offset for B-Roll
+    targetTime = (seg.brollStartOffset + (t - seg.time)) % Math.max(0.2, clip.duration - 0.1);
+  }
 
   if(seekExact){
-    if(Math.abs(v.currentTime - targetTime) > 0.02){
+    if(Math.abs(v.currentTime - targetTime) > 0.015){
       v.currentTime = targetTime;
       await new Promise(r => {
         let done = false;
@@ -535,8 +663,11 @@ async function renderFrameAtTime(t, seekExact = false){
         setTimeout(finish, 120);
       });
     }
-  } else if(Math.abs(v.currentTime - targetTime) > 0.35){
-    v.currentTime = targetTime;
+  } else {
+    // Keep live preview tightly synced (within 0.12s drift tolerance)
+    if(Math.abs(v.currentTime - targetTime) > 0.12){
+      v.currentTime = targetTime;
+    }
   }
 
   gl.bindTexture(gl.TEXTURE_2D, tex);
@@ -572,7 +703,10 @@ document.getElementById('playBtn').onclick = () => {
   } else {
     playStartTime = performance.now() / 1000;
   }
-  clips.forEach(c => c.videoEl.play().catch(()=>{}));
+  clips.forEach(c => {
+    c.videoEl.currentTime = c.type === 'perf' ? Math.max(0, c.syncOffset) : 0;
+    c.videoEl.play().catch(()=>{});
+  });
   const loop = () => {
     if(!isPlaying) return;
     const now = (audioBuffer && audioCtx) ? (audioCtx.currentTime - playStartTime) : (performance.now()/1000 - playStartTime);
@@ -611,7 +745,7 @@ document.getElementById('recToggleBtn').onclick = () => {
     mediaRec.onstop = async () => {
       stopPlayback();
       const blob = new Blob(recChunks, { type: 'video/webm' });
-      await addVideoClip(blob, `Take_${clips.length+1}.webm`);
+      await addVideoClip(blob, `Take_${clips.length+1}.webm`, true);
       if(beatTimes.length) generate9Variations();
       document.getElementById('closeCamBtn').click();
     };
