@@ -1,4 +1,4 @@
-const CACHE = 'end-june-v2';
+const CACHE = 'end-june-v3';
 const ASSETS = ['./', './index.html', './manifest.json'];
 
 self.addEventListener('install', e => {
@@ -12,5 +12,5 @@ self.addEventListener('activate', e => {
 });
 
 self.addEventListener('fetch', e => {
-  e.respondWith(caches.match(e.request).then(res => res || fetch(e.request)));
+  e.respondWith(fetch(e.request).catch(() => caches.match(e.request)));
 });
