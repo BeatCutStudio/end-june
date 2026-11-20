@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>END JUNE — Music Video Engine</title>
+<title>END JUNE v3.0 — Music Video Engine</title>
 <link rel="manifest" href="./manifest.json" />
 <meta name="theme-color" content="#dc2626" />
 <style>
@@ -44,7 +44,7 @@
 
 <header>
   <h1>END <span>JUNE</span></h1>
-  <div style="font-size:0.72rem;color:var(--muted)">v2.0 • SMART EXTRACT + GPU ENGINE</div>
+  <div style="font-size:0.72rem;color:#4ade80;font-weight:700;">v3.0 • TRUE REMIX ENGINE</div>
 </header>
 
 <div class="grid">
@@ -85,9 +85,10 @@
 
     <div class="clip-list" id="clipList"></div>
 
-    <span class="label" style="margin-top:10px;">4. Shuffle Engine (9 Unique Variations)</span>
+    <span class="label" style="margin-top:10px;">4. Shuffle Engine (9 Distinct Remixes)</span>
     <button class="primary" id="shuffleBtn">⚡ SHUFFLE 9 VARIATIONS</button>
     <div class="var-grid" id="varGrid"></div>
+    <div class="status" id="varInfo" style="color:#a1a1aa;"></div>
 
     <span class="label" style="margin-top:8px;">5. Export & Size Compressor</span>
     <div class="row">
@@ -135,16 +136,18 @@
 <script type="module">
 import { Output, Mp4OutputFormat, BufferTarget, CanvasSource, AudioBufferSource } from 'https://cdn.jsdelivr.net/npm/mediabunny@1.25.0/+esm';
 
-if ('serviceWorker' in navigator) navigator.serviceWorker.register('./sw.js').catch(()=>{});
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('./sw.js').then(reg => reg.update()).catch(()=>{});
+}
 
-// STATE
 let aspect = '9:16';
 let audioBuffer = null;
 let audioCtx = null;
 let audioSourceNode = null;
 let beatTimes = [];
-let clips = []; // { id, name, type:'perf'|'broll', grade, fx, videoEl, duration, windows:[] }
+let clips = [];
 let variations = [];
+let varDescriptions = [];
 let activeVar = 0;
 let isPlaying = false;
 let playStartTime = 0;
@@ -159,7 +162,6 @@ const GRADES = [
   { id: 5, name: 'Clean Natural' }
 ];
 
-// 6 VIRAL FX
 const FX_LIST = [
   '1. Zoom Punch',
   '2. Beat Flash',
@@ -169,7 +171,6 @@ const FX_LIST = [
   '6. VHS Retro'
 ];
 
-// WEBGL2 SHADER (6 GRADES + 6 FX + 6 TRANSITIONS + VIGNETTE)
 const canvas = document.getElementById('stage');
 const hudCanvas = document.getElementById('hud');
 const hudCtx = hudCanvas.getContext('2d');
@@ -186,38 +187,35 @@ uniform sampler2D u_tex;
 uniform int u_grade;
 uniform int u_fx;
 uniform int u_trans;
-uniform float u_beatPulse; // 1.0 at cut start -> 0.0
+uniform float u_beatPulse;
 uniform float u_time;
 uniform vec2 u_scale;
 
 void main(){
   vec2 uv = (v_uv - 0.5) * u_scale + 0.5;
 
-  // TRANSITIONS (active when u_beatPulse > 0.55)
   float tProg = clamp((u_beatPulse - 0.55) / 0.45, 0.0, 1.0);
-  if(u_trans == 1 && tProg > 0.0) { // Whip Pan Slide
+  if(u_trans == 1 && tProg > 0.0) {
     uv.x = fract(uv.x + tProg * 0.45);
-  } else if(u_trans == 2 && tProg > 0.0) { // Zoom Dive
+  } else if(u_trans == 2 && tProg > 0.0) {
     uv = (uv - 0.5) * (1.0 - tProg * 0.35) + 0.5;
-  } else if(u_trans == 4 && tProg > 0.0) { // Glitch Tear
+  } else if(u_trans == 4 && tProg > 0.0) {
     float band = floor(uv.y * 14.0);
     uv.x += sin(band * 12.0 + u_time * 40.0) * 0.08 * tProg;
   }
 
-  // 6 SPECIAL FX
-  if(u_fx == 0) { // 1. Zoom Punch
+  if(u_fx == 0) {
     uv = (uv - 0.5) * (1.0 - u_beatPulse * 0.09) + 0.5;
-  } else if(u_fx == 3) { // 4. Beat Shake
+  } else if(u_fx == 3) {
     uv.x += sin(u_beatPulse * 35.0) * 0.018 * u_beatPulse;
     uv.y += cos(u_beatPulse * 28.0) * 0.012 * u_beatPulse;
-  } else if(u_fx == 4) { // 5. Whip Spin micro-tilt
+  } else if(u_fx == 4) {
     float ang = sin(u_beatPulse * 3.14159) * 0.07;
     vec2 d = uv - 0.5;
     uv = vec2(d.x * cos(ang) - d.y * sin(ang), d.x * sin(ang) + d.y * cos(ang)) + 0.5;
   }
 
   vec3 col;
-  // 3. RGB Glitch OR 6. VHS Chroma Shift
   if((u_fx == 2 && u_beatPulse > 0.1) || u_fx == 5) {
     float shift = (u_fx == 2) ? (0.022 * u_beatPulse) : 0.005;
     col.r = texture(u_tex, clamp(uv + vec2(shift, 0.0), 0.001, 0.999)).r;
@@ -227,7 +225,6 @@ void main(){
     col = texture(u_tex, clamp(uv, 0.001, 0.999)).rgb;
   }
 
-  // 6. VHS Scanlines
   if(u_fx == 5) {
     float scan = sin(v_uv.y * 420.0) * 0.06;
     col -= scan;
@@ -235,30 +232,27 @@ void main(){
 
   float lum = dot(col, vec3(0.299, 0.587, 0.114));
 
-  // COLOR GRADING
-  if(u_grade == 0) { // RED ISOLATION
+  if(u_grade == 0) {
     float redness = col.r - max(col.g, col.b);
     float mask = smoothstep(0.07, 0.24, redness);
     vec3 bw = vec3(pow(lum, 1.15));
     col = mix(bw, col * vec3(1.3, 0.88, 0.88), mask);
-  } else if(u_grade == 1) { // DARK MOODY CINEMATIC
+  } else if(u_grade == 1) {
     col = pow(col, vec3(1.25)) * vec3(0.84, 0.92, 1.06);
     col = mix(vec3(lum), col, 0.85);
-  } else if(u_grade == 2) { // HIGH CONTRAST B&W
+  } else if(u_grade == 2) {
     col = vec3(clamp((lum - 0.5) * 1.7 + 0.5, 0.0, 1.0));
-  } else if(u_grade == 3) { // NEON VIBRANT
+  } else if(u_grade == 3) {
     col = mix(vec3(lum), col, 1.6);
     col = pow(col, vec3(0.92)) * vec3(1.06, 0.95, 1.16);
-  } else if(u_grade == 4) { // CRIMSON RED WASH
+  } else if(u_grade == 4) {
     col = vec3(lum * 1.38, lum * 0.2, lum * 0.2);
   }
 
-  // 2. Beat Flash OR Transition 3 (White Strobe)
   if(u_fx == 1) { col += vec3(u_beatPulse * 0.5); }
   if(u_trans == 3 && tProg > 0.0) { col += vec3(tProg * 0.85); }
-  if(u_trans == 5 && tProg > 0.0) { col *= (1.0 - tProg * 0.65); } // Smooth Dip
+  if(u_trans == 5 && tProg > 0.0) { col *= (1.0 - tProg * 0.65); }
 
-  // Cinematic Vignette + Bass Pulse
   float dist = distance(v_uv, vec2(0.5));
   col *= smoothstep(0.95, 0.35 - u_beatPulse * 0.05, dist);
 
@@ -285,7 +279,6 @@ gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
 gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
 gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
 
-// ASPECT & SIZE
 document.querySelectorAll('#aspectToggle .pill').forEach(p => {
   p.onclick = () => {
     document.querySelectorAll('#aspectToggle .pill').forEach(x => x.classList.remove('active'));
@@ -304,7 +297,6 @@ function updateCanvasSize(){
 }
 document.getElementById('resSelect').onchange = updateCanvasSize;
 
-// AUDIO UPLOAD & BEAT DETECTION
 document.getElementById('audioInput').onchange = async (e) => {
   const file = e.target.files[0];
   if(!file) return;
@@ -313,7 +305,7 @@ document.getElementById('audioInput').onchange = async (e) => {
   const arr = await file.arrayBuffer();
   audioBuffer = await audioCtx.decodeAudioData(arr);
   beatTimes = detectBeats(audioBuffer);
-  document.getElementById('beatStatus').textContent = `Ready: ${audioBuffer.duration.toFixed(1)}s | ${beatTimes.length} Sync Cuts`;
+  document.getElementById('beatStatus').textContent = `Ready: ${audioBuffer.duration.toFixed(1)}s | ${beatTimes.length} Sync Points`;
   if(clips.length) generate9Variations();
 };
 
@@ -332,7 +324,7 @@ function detectBeats(buffer){
   for(let i = 2; i < energies.length - 2; i++){
     const t = (i * step) / sr;
     const localAvg = (energies[i-2] + energies[i-1] + energies[i+1] + energies[i+2]) / 4;
-    if(energies[i] > localAvg * 1.32 && energies[i] > 0.075 && (t - lastCut) >= 0.48){
+    if(energies[i] > localAvg * 1.28 && energies[i] > 0.065 && (t - lastCut) >= 0.42){
       cuts.push(t);
       lastCut = t;
     }
@@ -340,18 +332,12 @@ function detectBeats(buffer){
   return cuts;
 }
 
-// SMART LONG-VIDEO HIGHLIGHT EXTRACTOR
 function extractHighlightWindows(duration){
-  // Breaks long videos (e.g., 5 min) into 6 curated 4-second highlight zones
-  // so seeking stays fast and avoids dead intros/outros
-  if(duration <= 8) return [0];
-  const usableStart = Math.min(2, duration * 0.05);
-  const usableEnd = Math.max(usableStart + 4, duration * 0.92 - 4);
+  if(duration <= 4) return [0];
   const windows = [];
-  const count = Math.min(8, Math.max(3, Math.floor(duration / 6)));
+  const count = Math.min(16, Math.max(4, Math.floor(duration / 2.5)));
   for(let i = 0; i < count; i++){
-    const pos = usableStart + ((usableEnd - usableStart) * (i / Math.max(1, count - 1)));
-    windows.push(pos);
+    windows.push((duration * 0.9) * (i / count));
   }
   return windows;
 }
@@ -420,34 +406,76 @@ document.getElementById('randomizeStylesBtn').onclick = () => {
     c.fx = Math.floor(Math.random() * FX_LIST.length);
   });
   renderClipList();
-  if(variations.length) renderFrameAtTime(0, false);
+  if(variations.length) renderFrameAtTime(0, true);
 };
 
-// SHUFFLE 9 VARIATIONS
+// TRUE REMIX SHUFFLE (9 GENUINELY DIFFERENT EDITS)
+const REMIX_MODES = [
+  { name: 'V1: Balanced Beat Cut', step: 1, perfBias: 0.5, overrideGrade: -1 },
+  { name: 'V2: Rapid Hype Cuts', step: 1, perfBias: 0.3, overrideGrade: -1 },
+  { name: 'V3: Cinematic Holds', step: 2, perfBias: 0.7, overrideGrade: -1 },
+  { name: 'V4: B-Roll Heavy Remix', step: 1, perfBias: 0.2, overrideGrade: -1 },
+  { name: 'V5: Performance Spotlight', step: 2, perfBias: 0.85, overrideGrade: -1 },
+  { name: 'V6: Sin City RED Pop Remix', step: 1, perfBias: 0.5, overrideGrade: 0 },
+  { name: 'V7: High-Contrast Noir Cut', step: 2, perfBias: 0.4, overrideGrade: 2 },
+  { name: 'V8: Neon Club Remix', step: 1, perfBias: 0.5, overrideGrade: 3 },
+  { name: 'V9: Slow-Burn Drama Cut', step: 3, perfBias: 0.6, overrideGrade: 1 }
+];
+
 function generate9Variations(){
   if(!clips.length) return alert('Add at least 1 video clip first.');
-  const cuts = beatTimes.length ? beatTimes : Array.from({length: 25}, (_, i) => i * 0.8);
+  const baseCuts = beatTimes.length ? beatTimes : Array.from({length: 30}, (_, i) => i * 0.75);
   const perf = clips.map((c, i) => ({c, i})).filter(x => x.c.type === 'perf');
   const broll = clips.map((c, i) => ({c, i})).filter(x => x.c.type === 'broll');
   const transMode = document.getElementById('globalTrans').value;
 
-  variations = Array.from({length: 9}, (_, vIdx) => {
+  variations = REMIX_MODES.map((mode, vIdx) => {
+    // Filter beat points based on remix pace (step 1 = fast, step 2 = medium, step 3 = slow)
+    const activeCuts = baseCuts.filter((_, idx) => idx % mode.step === 0);
     let lastClip = -1;
-    return cuts.map((t, cutIdx) => {
-      const usePerf = (perf.length && broll.length) ? (cutIdx % 2 === vIdx % 2) : perf.length > 0;
-      const pool = usePerf ? perf : (broll.length ? broll : perf);
+    let lastWin = -1;
+
+    return activeCuts.map((t, cutIdx) => {
+      // Weighted random selection so every variation picks a genuinely different sequence
+      let pool;
+      if(perf.length && broll.length){
+        pool = (Math.random() < mode.perfBias) ? perf : broll;
+      } else {
+        pool = perf.length ? perf : broll;
+      }
+
       let chosen = pool[Math.floor(Math.random() * pool.length)];
       if(pool.length > 1 && chosen.i === lastClip){
-        chosen = pool[(pool.indexOf(chosen) + 1) % pool.length];
+        const altIndex = (pool.indexOf(chosen) + 1 + Math.floor(Math.random() * (pool.length - 1))) % pool.length;
+        chosen = pool[altIndex];
       }
       lastClip = chosen.i;
-      // Pick from extracted smart highlight windows
+
+      // Pick a distinct timestamp window inside the clip
       const winList = chosen.c.windows;
-      const startOffset = winList[Math.floor(Math.random() * winList.length)];
+      let winIdx = Math.floor(Math.random() * winList.length);
+      if(winList.length > 1 && winIdx === lastWin) winIdx = (winIdx + 1) % winList.length;
+      lastWin = winIdx;
+
+      // Add random jitter within the window so even 1-clip tests jump to completely different scenes
+      const jitter = Math.random() * Math.min(2.5, chosen.c.duration * 0.25);
+      const startOffset = (winList[winIdx] + jitter) % Math.max(0.5, chosen.c.duration - 1.0);
+
       const trans = (transMode === 'random') ? Math.floor(Math.random() * 6) : parseInt(transMode);
-      return { time: t, clipIndex: chosen.i, startOffset, trans };
+      const fx = (vIdx % 2 === 1) ? ((chosen.c.fx + vIdx) % FX_LIST.length) : chosen.c.fx;
+
+      return {
+        time: t,
+        clipIndex: chosen.i,
+        startOffset,
+        trans,
+        grade: mode.overrideGrade !== -1 ? mode.overrideGrade : chosen.c.grade,
+        fx
+      };
     });
   });
+
+  varDescriptions = REMIX_MODES.map((m, i) => `${m.name} (${variations[i].length} cuts)`);
 
   const grid = document.getElementById('varGrid');
   grid.innerHTML = '';
@@ -459,15 +487,16 @@ function generate9Variations(){
       activeVar = i;
       document.querySelectorAll('.var-btn').forEach(x => x.classList.remove('active'));
       b.classList.add('active');
-      renderFrameAtTime(0, false);
+      document.getElementById('varInfo').textContent = varDescriptions[i];
+      renderFrameAtTime(0, true);
     };
     grid.appendChild(b);
   }
-  renderFrameAtTime(0, false);
+  document.getElementById('varInfo').textContent = varDescriptions[activeVar];
+  renderFrameAtTime(0, true);
 }
 document.getElementById('shuffleBtn').onclick = generate9Variations;
 
-// DRAW OVERLAY TEXT (TITLE BADGE)
 function drawOverlayBadge(pulse){
   const title = document.getElementById('titleOverlay').value.trim();
   hudCtx.clearRect(0, 0, hudCanvas.width, hudCanvas.height);
@@ -486,7 +515,6 @@ function drawOverlayBadge(pulse){
   hudCtx.restore();
 }
 
-// RENDER SINGLE FRAME
 async function renderFrameAtTime(t, seekExact = false){
   const tl = variations[activeVar];
   if(!tl || !tl.length || !clips.length) return;
@@ -504,7 +532,7 @@ async function renderFrameAtTime(t, seekExact = false){
         let done = false;
         const finish = () => { if(!done){ done = true; v.removeEventListener('seeked', finish); r(); } };
         v.addEventListener('seeked', finish);
-        setTimeout(finish, 120); // Prevents infinite hang on slow keyframes
+        setTimeout(finish, 120);
       });
     }
   } else if(Math.abs(v.currentTime - targetTime) > 0.35){
@@ -520,8 +548,8 @@ async function renderFrameAtTime(t, seekExact = false){
   if(vAsp > cAsp) sx = cAsp / vAsp; else sy = vAsp / cAsp;
 
   const pulse = Math.max(0, 1 - (t - seg.time) * 3.5);
-  gl.uniform1i(gl.getUniformLocation(prog, 'u_grade'), clip.grade);
-  gl.uniform1i(gl.getUniformLocation(prog, 'u_fx'), clip.fx);
+  gl.uniform1i(gl.getUniformLocation(prog, 'u_grade'), seg.grade !== undefined ? seg.grade : clip.grade);
+  gl.uniform1i(gl.getUniformLocation(prog, 'u_fx'), seg.fx !== undefined ? seg.fx : clip.fx);
   gl.uniform1i(gl.getUniformLocation(prog, 'u_trans'), seg.trans);
   gl.uniform1f(gl.getUniformLocation(prog, 'u_beatPulse'), pulse);
   gl.uniform1f(gl.getUniformLocation(prog, 'u_time'), t);
@@ -530,7 +558,6 @@ async function renderFrameAtTime(t, seekExact = false){
   drawOverlayBadge(pulse);
 }
 
-// PREVIEW PLAYBACK
 document.getElementById('playBtn').onclick = () => {
   if(!variations.length) generate9Variations();
   if(!variations.length) return;
@@ -565,7 +592,6 @@ function stopPlayback(){
 }
 document.getElementById('stopBtn').onclick = stopPlayback;
 
-// IN-APP CAMERA TAKE RECORDER
 let camStream = null, mediaRec = null, recChunks = [];
 document.getElementById('openCamBtn').onclick = async () => {
   document.getElementById('camModal').style.display = 'flex';
@@ -603,7 +629,6 @@ document.getElementById('recToggleBtn').onclick = () => {
   }
 };
 
-// NON-BLOCKING HARDWARE MP4 EXPORT WITH TITLE COMPOSITING
 document.getElementById('exportBtn').onclick = async () => {
   if(!variations.length) return alert('Generate variations first.');
   stopPlayback();
@@ -622,7 +647,6 @@ document.getElementById('exportBtn').onclick = async () => {
     const duration = audioBuffer ? audioBuffer.duration : 15;
     const totalFrames = Math.floor(duration * fps);
 
-    // Composite canvas merges WebGL video + HUD title badge
     const compCanvas = document.createElement('canvas');
     compCanvas.width = canvas.width;
     compCanvas.height = canvas.height;
@@ -659,7 +683,7 @@ document.getElementById('exportBtn').onclick = async () => {
         const pct = Math.round((f / totalFrames) * 100);
         progFill.style.width = `${pct}%`;
         status.textContent = `Rendering Frame ${f}/${totalFrames} (${pct}%)`;
-        await new Promise(r => setTimeout(r, 0)); // Yields to UI so laptop never freezes
+        await new Promise(r => setTimeout(r, 0));
       }
     }
 
